@@ -1,0 +1,5 @@
+SQLconfig:
+  IP_address: localhost
+  User_name: root
+  Password: rootpaswd
+  Data_base: dbname
