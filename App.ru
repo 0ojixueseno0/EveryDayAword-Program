@@ -1,26 +1,39 @@
 require_relative 'autoRequire'
 
+$hashwd = Hash[]
+
 config = YAML.load(File.open("SQLconfig.yml"))
 
+
+
 $client = Mysql2::Client.new(
-    :host => "#{config["SQLconfig"]["IP_address"]}",
-    :username => "#{config["SQLconfig"]["User_name"]}",
-    :password => "#{config["SQLconfig"]["Password"]}",
-    :database => "#{config["SQLconfig"]["Data_base"]}",
-    :encoding => 'utf8'
-    )
-
-    
-
-def reget
-  $outword = Array[]
-  results = $client.query("SELECT Word FROM main")
-  results.each do |row|
-    $outword << row['Word']
-    $hashwd = Hash["word" => $outword.reverse]
+  :host => "#{config["SQLconfig"]["IP_address"]}",
+  :username => "#{config["SQLconfig"]["User_name"]}",
+  :password => "#{config["SQLconfig"]["Password"]}",
+  :database => "#{config["SQLconfig"]["Data_base"]}",
+  :encoding => 'utf8',
+  :reconnect => true
+  )
+  
+  
+  
+  def reget
+    $outword = Array[]
+    results = $client.query("SELECT Word FROM main")
+    results.each do |row|
+      $outword << row['Word']
+      $hashwd = Hash["word" => $outword.reverse]
+    end
   end
-end
+  
+reget
 
+  Thread.new do
+    loop do
+      sleep 600
+      reget
+    end
+  end
 
 
 App = lambda do |env|
@@ -30,7 +43,7 @@ App = lambda do |env|
     ws.on :message do |msg|
       puts msg.data
       if msg.data == "getword"
-        reget
+        # reget
         # ws.send $outword
         ws.send $hashwd.to_json
         sleep 2
