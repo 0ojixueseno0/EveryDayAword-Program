@@ -47,6 +47,8 @@ App = lambda do |env|
         # ws.send $outword
         ws.send $hashwd.to_json
         sleep 2
+      elsif msg.data == "reget"
+        reget
       else
         p "error"
       end
