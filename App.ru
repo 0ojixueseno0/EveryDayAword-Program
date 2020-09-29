@@ -4,8 +4,6 @@ $hashwd = Hash[]
 
 config = YAML.load(File.open("SQLconfig.yml"))
 
-
-
 $client = Mysql2::Client.new(
   :host => "#{config["SQLconfig"]["IP_address"]}",
   :username => "#{config["SQLconfig"]["User_name"]}",
@@ -14,57 +12,55 @@ $client = Mysql2::Client.new(
   :encoding => 'utf8',
   :reconnect => true
   )
-  
-  
-  
-  def reget
-    $outword = Array[]
-    results = $client.query("SELECT Word FROM main")
-    results.each do |row|
-      $outword << row['Word']
-      $hashwd = Hash["word" => $outword.reverse]
-    end
+
+def reget
+  $outword = Array[]
+  results = $client.query("SELECT Word FROM main")
+  results.each do |row|
+    $outword << row['Word']
+    $hashwd = Hash["word" => $outword.reverse]
   end
+end
   
 reget
-
-  Thread.new do
-    loop do
-      sleep 600
-      reget
-    end
+  
+Thread.new do
+  loop do
+    sleep 600
+    reget
   end
-
+end
+  
+Index = lambda do |env|
+  [200, {'Content-Type' => 'text/html'}, ["This is index!"]] 
+end
 
 App = lambda do |env|
-  if Faye::WebSocket.websocket?(env)
-    ws = Faye::WebSocket.new(env)
+  [200, { 'Content-Type' => 'text/html' }, ['Its not a WS req']]
+end
 
-    ws.on :message do |msg|
-      puts msg.data
-      if msg.data == "getword"
-        # reget
-        # ws.send $outword
-        ws.send $hashwd.to_json
-        sleep 2
-      elsif msg.data == "reget"
-        reget
-      else
-        p "error"
-      end
-    end
-
-    ws.on :close do |event|
-      puts "[#{Time.new.strftime('%Y-%m-%d %H:%M:%S')}][!]: 一个客户端断开连接 (#{event.code})"
-      ws = nil
-    end
-
-    ws.rack_response
-  else
-    # 正常HTTP请求
-    [200, { 'Content-Type' => 'text/html' }, ['Its not a WS req']]
-  end
+Getword = lambda do |env|
+  [200, {'Content-Type' => 'application/json'}, [$hashwd.to_json]] 
+end
+Reget = lambda do |env|
+  reget
+  [200, {'Content-Type' => 'application/json'}, ["OK"]] 
+end
+Newestget = lambda do |env|
+  [200, {'Content-Type' => 'application/json'}, [$hashwd["word"][0]]] 
+end
+Randomget = lambda do |env|
+  [200, {'Content-Type' => 'application/json'}, [$hashwd["word"][rand($hashwd["word"].length)].to_json]] 
 end
 
 
-run App
+# map '/admin' {run App}
+# map '/admin' {run App}
+
+
+map '/' do run Index end
+map '/test' do run App end
+map '/getword' do run Getword end
+map '/reget' do run Reget end
+map '/newestget' do run Newestget end
+map '/randomget' do run Randomget end
